@@ -2,6 +2,32 @@
 /**
  * Module dependencies.
  */
+ 
+var tinyurl_version = "0.0.1"; 
+var https = require('https');
+var options = {
+    host: 'raw.githubusercontent.com',
+    path: '/Dasoren/tinyurl/master/version'
+}
+var request = https.request(options, function (res) {
+    var data = '';
+    res.on('data', function (chunk) {
+        data += chunk;
+    });
+    res.on('end', function () {
+        var tinyurl_version_new = data;
+        if(tinyurl_version_new == tinyurl_version){
+            console.log("This version ("+tinyurl_version+") is up to date.");
+        }else{
+            console.log("-- This version ("+tinyurl_version+") is OUT of date.\n-- The new version is ("+tinyurl_version_new+")\n-- Please update by running git clone git://github.com/dasoren/tinyurl.git from the tinyurl folder.\n-- This will not edit your configuration files.");
+        }
+    });
+});
+request.on('error', function (e) {
+    console.log(e.message);
+});
+request.end();
+ 
 
 var express = require('express')
 var redis = require("redis"),
