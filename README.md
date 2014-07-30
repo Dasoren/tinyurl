@@ -2,8 +2,9 @@
 ##  Powered by Node.js, Express.js, and Reddis
 
 ### Install:
--   `$ git clone git://github.com/dasoren/TinyURL.git`
--   `$ cd TinyURL/`
+-   `$ git clone git://github.com/dasoren/tinyurl.git`
+-   `$ cd tinyurl/`
+-   `$ npm install`
 -   Make sure you have [Node.js](http://nodejs.org/), and [Redis](http://redis.io/download) installed.
 -   Run the `$ redis-server` command in a terminal window
 -   edit `$ nano server.js` and edit the var's `host_url` and `default_link` for your system.
@@ -32,6 +33,7 @@
 - Add random url
 - Add web interface
 - Add stats viewer
+- API Documentation
 
 ### Change Log:
 
