@@ -1,4 +1,4 @@
-# TinyURL by Dasoren
+# TinyURL by Dasoren (Alpha, 0.0.1)
 ##  Powered by Node.js, Express.js, and Reddis
 
 ### Install:
