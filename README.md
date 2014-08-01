@@ -12,12 +12,12 @@
 -   Visit `http://127.0.0.1:8092` to view the running application (no web app at this time)
 
 ---
-### API:
--   `/new?name=[custom_id_here]&url=[http://example.com]&pass=[Password_to_delete_tiny]` — Returns json for a tinyed ID.
--   `/[id]` — Redirects to tinyed website.
--   Stats coming soon
+### API v1:
+-   `/v1/new?name=[custom_id_here]&url=[http://example.com]&pass=[Password_to_delete_tiny]` — Returns json for a tinyed ID.
+-   `/v1/[id]` — Redirects to tinyed website.
+-   `/v1/stats/[id]` - Returns the id stats and values.
 
-### Example:
+### Example of old API:
 -   `$ curl http://127.0.0.1:8092/new?name=google&url=http://google.com&pass=del`
 
 > {error: 201, message: google Created, protocol: http:, url: google.com, path: /, pass: del, link: http://127.0.0.1:8092/google}
@@ -37,6 +37,7 @@
 
 ### Change Log:
 
+- 7/31/2014 Started adding in API v1
 - 7/30/2014 First post and upload
 
 ### Notes:

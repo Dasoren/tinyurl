@@ -1,32 +1,43 @@
 /**
  * Module dependencies.
  */
- 
-var tinyurl_version = "0.0.11"; //DO NOT EDIT
+var colors = require('./node_modules/colors');
+var tinyurl_version = "0.0.12"; //DO NOT EDIT
 var https = require('https');
-var options = {
-    host: 'raw.githubusercontent.com',
-    path: '/Dasoren/tinyurl/master/version'
+
+function versionCheck(isstart){
+    var options = {
+        host: 'raw.githubusercontent.com',
+        path: '/Dasoren/tinyurl/master/version'
+    }
+    var request = https.request(options, function (res) {
+        var data = '';
+            res.on('data', function (chunk) {
+            data += chunk;
+            });
+            res.on('end', function () {
+                var tinyurl_version_new = data;
+                if(tinyurl_version_new != tinyurl_version){
+                    console.log("-- This version (".red+tinyurl_version.yellow+") is OUT of date.\n-- The new version is (".red+tinyurl_version_new.cyan+")\n-- Please update by running git clone git://github.com/dasoren/tinyurl.git from the tinyurl folder.\n-- This will not edit your configuration files.".red);
+                }else if(tinyurl_version_new == tinyurl_version && isstart == "yes"){
+                    console.log("This version (".green+tinyurl_version.cyan+") is up to date.".green);
+                }else if(tinyurl_version_new == tinyurl_version){
+                    
+                }else{
+                    console.log("This version (".yellow+tinyurl_version.cyan+") might be out of date.".yellow);
+                }
+            });
+        });
+    request.on('error', function (e) {
+        console.log(e.message);
+    });
+    request.end();
 }
-var request = https.request(options, function (res) {
-    var data = '';
-    res.on('data', function (chunk) {
-        data += chunk;
-    });
-    res.on('end', function () {
-        var tinyurl_version_new = data;
-        if(tinyurl_version_new == tinyurl_version){
-            console.log("This version ("+tinyurl_version+") is up to date.");
-        }else{
-            console.log("-- This version ("+tinyurl_version+") is OUT of date.\n-- The new version is ("+tinyurl_version_new+")\n-- Please update by running git clone git://github.com/dasoren/tinyurl.git from the tinyurl folder.\n-- This will not edit your configuration files.");
-        }
-    });
-});
-request.on('error', function (e) {
-    console.log(e.message);
-});
-request.end();
- 
+// Disable us, if you want to remove version checking for updates
+setInterval(versionCheck, 259200000); // Checks version every 3 days (259200000ms)
+versionCheck('yes'); // Checks version on start
+//
+
 
 var express = require('express')
 var redis = require("redis"),
@@ -36,6 +47,7 @@ client.select('10');
 
 var app = module.exports = express.createServer();
 
+var app_port = '8092';
 // TTL times for random and customs
 var ttl = 2592000;  // Random link time out
 var cttl = 7776000;  // Custom link time out
@@ -83,6 +95,44 @@ function randomString(stringLength) {
 //API Version 1.0
 
 app.del('/v1/:id', function(req, res){
+    var query = require('url').parse(req.url,true).query;
+    var id = req.params.id;
+    if(query.pass == null){
+        var pass = '';
+    }else{
+        var pass = query.pass;
+    }
+    client.hgetall(redis_custom+id, function(err, hash) {
+        if(hash != null){
+            if(pass == master_pass){
+                client.del(redis_custom+id);
+                res.writeHead(202, {  'message': id+' being deleted'});
+                res.end('{error: 202, message: '+id+' being deleted}');
+                client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with master password');
+                client.ttl(redis_v1_log+id, log.ttl);
+            }else if(hash.remove != null){
+                if(hash.remove == pass){
+                    client.del(redis_custom+id);
+                    res.writeHead(202, {  'message': id+' being deleted'});
+                    res.end('{error: 202, message: '+id+' being deleted}');
+                    client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with password');
+                    client.ttl(redis_v1_log+id, log_ttl);
+                }else{
+                    res.writeHead(401, {  'message': 'Password is incorect'});
+                    res.end('{error: 401, Password is incorect}');
+                }
+            }else{
+                res.writeHead(401, {  'message': id+' No password found, can not be deleted.'});
+                res.end('{error: 201, message: '+id+' No password found, can not be deleted.}');
+            }
+        }else{
+            res.writeHead(404, {  'message': id+' not found'});
+            res.end('{error: 404, message: '+id+' not found}');
+        }
+    });
+}); 
+
+app.get('/v1/del/:id', function(req, res){
     var query = require('url').parse(req.url,true).query;
     var id = req.params.id;
     if(query.pass == null){
@@ -478,5 +528,5 @@ client.on("error", function (err) {
         console.log("Error " + err);
 });
 
-app.listen(8092);
-console.log("TinyURL server listening on port 8092");
+app.listen(app_port);
+console.log("TinyURL server listening on port "+app_port);
