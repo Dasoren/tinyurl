@@ -5,5 +5,7 @@
   , "dependencies": {
       "express": "2.5.5"
     , "redis": "*"
+    , "colors": "*"
+    , "fs.extra": "*"
   }
 }

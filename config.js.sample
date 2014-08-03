@@ -1,0 +1,22 @@
+config = {};
+config.app_port = '8092';
+// TTL times for random and customs
+config.ttl = 2592000;  // Random link time out
+config.cttl = 7776000;  // Custom link time out
+config.log_ttl = 605800; // Log time out
+// Your Tiny URL
+config.host_url = 'http://127.0.0.1:8092/';
+// Your Default URL
+config.default_link = 'http://127.0.0.1';
+// Redis var naming
+config.redis_custom = 'tiny:custom:';
+config.redis_random = 'tiny:random:';
+config.redis_v1 = 'tiny:v1:';
+config.redis_v1_log = 'tiny:v1:log:';
+// Master delete passowrd
+config.master_pass = '';
+
+config.redisDB = '10';
+config.vCheck = 'true';
+
+module.exports = config;

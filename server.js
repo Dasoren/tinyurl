@@ -1,9 +1,28 @@
 /**
  * Module dependencies.
  */
+var tinyurl_version = "0.0.13"; //DO NOT EDIT
+var fs = require('fs.extra');
+fs.exists('./config.js', function (exists) {
+    fileexists = (exists ? "yes" : "no");
+    if(fileexists == "yes") { 
+        
+    }else{ 
+        fs.copy('./config.js.sample', './config.js', function (err) {
+            if (err) { throw err; }
+            console.log("made the config.js file.");
+        });
+    }
+});
+var config = require('./config');
 var colors = require('./node_modules/colors');
-var tinyurl_version = "0.0.12"; //DO NOT EDIT
 var https = require('https');
+var express = require('express')
+var redis = require("redis"),
+    client = redis.createClient();
+//var fs = require('fs');
+var app = module.exports = express.createServer();
+
 
 function versionCheck(isstart){
     var options = {
@@ -33,27 +52,20 @@ function versionCheck(isstart){
     });
     request.end();
 }
-// Disable us, if you want to remove version checking for updates
-setInterval(versionCheck, 259200000); // Checks version every 3 days (259200000ms)
-versionCheck('yes'); // Checks version on start
-//
-
-
-var express = require('express')
-var redis = require("redis"),
-    client = redis.createClient();
-var fs = require('fs');
-client.select('10');
-
-var app = module.exports = express.createServer();
-
+if(config.vCheck == 'true'){
+    // Disable us, if you want to remove version checking for updates
+    setInterval(versionCheck, 259200000); // Checks version every 3 days (259200000ms)
+    versionCheck('yes'); // Checks version on start
+    //
+}
+/*
 var app_port = '8092';
 // TTL times for random and customs
 var ttl = 2592000;  // Random link time out
 var cttl = 7776000;  // Custom link time out
 var log_ttl = 605800; // Log time out
 // Your Tiny URL
-var host_url = 'http://127.0.0.1:8092/';
+var config.host_url = 'http://127.0.0.1:8092/';
 // Your Default URL
 var default_link = 'http://127.0.0.1';
 // Redis var naming
@@ -63,11 +75,14 @@ var redis_v1 = 'tiny:v1:';
 var redis_v1_log = 'tiny:v1:log:';
 // Master delete passowrd
 var master_pass = '';
-if(master_pass == ''){
+
+client.select('10');
+*/
+if(config.master_pass == ''){
     master_pass = randomString(20);
     console.log('-- Master Pass is '+master_pass+' ');
 }
-
+client.select(config.redisDB);
 
 app.configure('development', function(){
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
@@ -102,21 +117,21 @@ app.del('/v1/:id', function(req, res){
     }else{
         var pass = query.pass;
     }
-    client.hgetall(redis_custom+id, function(err, hash) {
+    client.hgetall(config.redis_custom+id, function(err, hash) {
         if(hash != null){
             if(pass == master_pass){
                 client.del(redis_custom+id);
                 res.writeHead(202, {  'message': id+' being deleted'});
                 res.end('{error: 202, message: '+id+' being deleted}');
-                client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with master password');
-                client.ttl(redis_v1_log+id, log.ttl);
+                client.hmset(config.redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with master password');
+                client.ttl(config.redis_v1_log+id, config.log_ttl);
             }else if(hash.remove != null){
                 if(hash.remove == pass){
-                    client.del(redis_custom+id);
+                    client.del(config.redis_custom+id);
                     res.writeHead(202, {  'message': id+' being deleted'});
                     res.end('{error: 202, message: '+id+' being deleted}');
-                    client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with password');
-                    client.ttl(redis_v1_log+id, log_ttl);
+                    client.hmset(config.redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with password');
+                    client.ttl(config.redis_v1_log+id, config.log_ttl);
                 }else{
                     res.writeHead(401, {  'message': 'Password is incorect'});
                     res.end('{error: 401, Password is incorect}');
@@ -140,21 +155,21 @@ app.get('/v1/del/:id', function(req, res){
     }else{
         var pass = query.pass;
     }
-    client.hgetall(redis_custom+id, function(err, hash) {
+    client.hgetall(config.redis_custom+id, function(err, hash) {
         if(hash != null){
             if(pass == master_pass){
-                client.del(redis_custom+id);
+                client.del(config.redis_custom+id);
                 res.writeHead(202, {  'message': id+' being deleted'});
                 res.end('{error: 202, message: '+id+' being deleted}');
-                client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with master password');
-                client.ttl(redis_v1_log+id, log.ttl);
+                client.hmset(config.redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with master password');
+                client.ttl(config.redis_v1_log+id, config.log.ttl);
             }else if(hash.remove != null){
                 if(hash.remove == pass){
-                    client.del(redis_custom+id);
+                    client.del(config.redis_custom+id);
                     res.writeHead(202, {  'message': id+' being deleted'});
                     res.end('{error: 202, message: '+id+' being deleted}');
-                    client.hmset(redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with password');
-                    client.ttl(redis_v1_log+id, log_ttl);
+                    client.hmset(config.redis_v1_log+id, 'type', 'delete', 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000), 'note', 'deleted with password');
+                    client.ttl(config.redis_v1_log+id, config.log_ttl);
                 }else{
                     res.writeHead(401, {  'message': 'Password is incorect'});
                     res.end('{error: 401, Password is incorect}');
@@ -199,15 +214,15 @@ app.post('/v1/new', function(req, res){
     if(query.url == undefined){
         res.send({error: 'No URL was entered.'});
   	}else{
-        client.hgetall(redis_v1+name, function(err, hash){
+        client.hgetall(config.redis_v1+name, function(err, hash){
             if(hash == null){
-                client.hmset(redis_v1+name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass, 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000));
-                client.hincrby(redis_v1+name, 'views', 1);
-                client.expire(redis_v1+name, ttl);
+                client.hmset(config.redis_v1+name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass, 'ip', req.connection.remoteAddress, 'timedate', Math.round(Date.now() / 1000));
+                client.hincrby(config.redis_v1+name, 'views', 1);
+                client.expire(config.redis_v1+name, config.ttl);
                 res.writeHead(201, { 'message': name+' Created'});
-                res.end('{error: 201, message: '+name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+host_url+name+'}');
+                res.end('{error: 201, message: '+name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+config.host_url+name+'}');
             }else{
-                client.ttl(redis_v1+query.name, function(err, ttl){
+                client.ttl(config.redis_v1+query.name, function(err, ttl){
                     res.writeHead(409, {  'message': query.name+' in use'});
                     res.end('{error: 409, message: '+query.name+' in use, name: '+query.name+', link: '+hash.protocol+'//'+hash.url+hash.path+', ttl: '+ttl+'}');
                 });
@@ -244,15 +259,15 @@ app.get('/v1/new', function(req, res){
     if(query.url == undefined){
         res.send({error: 'No URL was entered.'});
   	}else{
-        client.hgetall('tiny:v1:'+name, function(err, hash){
+        client.hgetall(config.redis_v1+name, function(err, hash){
             if(hash == null){
-                client.hmset('tiny:v1:'+name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass);
-                client.hincrby('tiny:v1:'+name, 'views', 1);
-                client.expire('tiny:v1:'+name, ttl);
+                client.hmset(config.redis_v1+name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass);
+                client.hincrby(config.redis_v1+name, 'views', 1);
+                client.expire(config.redis_v1+name, config.ttl);
                 res.writeHead(201, { 'message': name+' Created'});
-                res.end('{error: 201, message: '+name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+host_url+name+'}');
+                res.end('{error: 201, message: '+name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+config.host_url+name+'}');
             }else{
-                client.ttl('tiny:v1:'+query.name, function(err, ttl){
+                client.ttl(config.redis_v1+query.name, function(err, ttl){
                     res.writeHead(409, {  'message': query.name+' in use'});
                     res.end('{error: 409, message: '+query.name+' in use, name: '+query.name+', link: '+hash.protocol+'//'+hash.url+hash.path+', ttl: '+ttl+'}');
                 });            
@@ -266,10 +281,10 @@ app.get('/v1/stats/:id', function(req, res){
   		res.send({error: 'No ID was entered.'});
   	}else{
   		var id = req.params.id;
-	  	client.hgetall(redis_v1+id, function(err, hash) {
+	  	client.hgetall(config.redis_v1+id, function(err, hash) {
             if(hash != null){
                 res.writeHead(200, { 'message': id+' Stats'});
-                res.end('{error: 200, message: '+id+' Stats, views: '+hash.views+' protocol: '+hash.protocol+', url: '+hash.url+', path: '+hash.path+', link: '+host_url+id+'}');
+                res.end('{error: 200, message: '+id+' Stats, views: '+hash.views+' protocol: '+hash.protocol+', url: '+hash.url+', path: '+hash.path+', link: '+config.host_url+id+'}');
             }else{
                 res.writeHead(404, {error: 'Invalid ID was entered.'});
                 res.end('{error: 404, message: Invalid ID was entered}');
@@ -283,20 +298,20 @@ app.get('/v1/:id', function(req, res){
   		res.send({error: 'No ID was entered.'});
   	}else{
   		var id = req.params.id;
-	  	client.hgetall(redis_v1+id, function(err, hash) {
+	  	client.hgetall(config.redis_v1+id, function(err, hash) {
 	  		if(hash != null){
                 if(hash.protocol != null){
-                    client.hincrby(redis_v1+id, 'views', 1);
-                    client.expire(redis_v1+id, ttl);
+                    client.hincrby(config.redis_v1+id, 'views', 1);
+                    client.expire(config.redis_v1+id, config.ttl);
                     res.writeHead(302, {  'Location': hash.protocol+'//'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: '+hash.protocol+'//'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }else{
-                    client.hincrby(redis_v1+id, 'views', 1);
-                    client.expire(redis_v1+id, ttl);
+                    client.hincrby(config.redis_v1+id, 'views', 1);
+                    client.expire(config.redis_v1+id, config.ttl);
                     res.writeHead(302, {  'Location': 'http://'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: http://'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }
 	   		}else{
                 res.writeHead(404, {error: 'Invalid ID was entered.'});
@@ -307,7 +322,7 @@ app.get('/v1/:id', function(req, res){
 });
 
 app.get('/v1/', function(req,res){
-    res.writeHead(302, {  'Location': default_link});
+    res.writeHead(302, {  'Location': config.default_link});
 	res.end();
 });
 
@@ -321,11 +336,11 @@ app.del('/:id?', function(req, res){
     }else{
         var pass = query.pass;
     }
-    client.hgetall(redis_custom+id, function(err, hash) {
+    client.hgetall(config.redis_custom+id, function(err, hash) {
         if(hash != null){
             if(hash.remove != null){
                 if(hash.remove == pass){
-                    client.del(redis_custom+id);
+                    client.del(config.redis_custom+id);
                     res.writeHead(202, {  'message': id+' being deleted'});
                     res.end('{error: 202, message: '+id+' being deleted}');
                 }else{
@@ -333,15 +348,15 @@ app.del('/:id?', function(req, res){
                     res.end('{error: 401, Password is incorect}');
                 }
             }else{
-                client.del(redis_custom+id);
+                client.del(config.redis_custom+id);
                 res.writeHead(202, {  'message': id+' being deleted'});
                 res.end('{error: 202, message: '+id+' being deleted}');
             }
         }else{
-            client.hgetall(redis_random+id, function(err, hash) {
+            client.hgetall(config.redis_random+id, function(err, hash) {
                 if(hash.remove != null){
                     if(hash.remove == pass){
-                        client.del(redis_random+id);
+                        client.del(config.redis_random+id);
                         res.writeHead(202, {  'message': id+' being deleted'});
                         res.end('{error: 202, message: '+id+' being deleted}');
                     }else{
@@ -349,7 +364,7 @@ app.del('/:id?', function(req, res){
                         res.end('{error: 401, Password is incorect}');
                     }
                 }else{
-                    client.del(redis_random+id);
+                    client.del(config.redis_random+id);
                     res.writeHead(202, {  'message': id+' being deleted'});
                     res.end('{error: 202, message: '+id+' being deleted}');
                 }
@@ -383,15 +398,15 @@ app.post('/new', function(req, res){
   	} else if(query.name == undefined){
         query.name = randomString();
     }else{
-        client.hgetall(redis_custom+query.name, function(err, hash){
+        client.hgetall(config.redis_custom+query.name, function(err, hash){
             if(hash == null){
                 client.hmset("tiny:custom:"+query.name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass);
-                client.hincrby(redis_custom+query.name, 'views', 1);
-                client.expire(redis_custom+query.name, cttl);
+                client.hincrby(config.redis_custom+query.name, 'views', 1);
+                client.expire(config.redis_custom+query.name, config.cttl);
                 res.writeHead(201, { 'message': query.name+' Created'});
-                res.end('{error: 201, message: '+query.name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+host_url+query.name+'}');
+                res.end('{error: 201, message: '+query.name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+config.host_url+query.name+'}');
             }else{
-                client.ttl(redis_custom+query.name, function(err, ttl){
+                client.ttl(config.redis_custom+query.name, function(err, ttl){
                     res.writeHead(409, {  'message': query.name+' in use'});
                     res.end('{error: 409, message: '+query.name+' in use, name: '+query.name+', link: '+hash.protocol+'//'+hash.url+hash.path+', ttl: '+ttl+'}');
                 });
@@ -425,15 +440,15 @@ app.get('/new', function(req, res){
   	} else if(query.name == undefined){
         query.name = randomString();
     }else{
-        client.hgetall(redis_custom+query.name, function(err, hash){
+        client.hgetall(config.redis_custom+query.name, function(err, hash){
             if(hash == null){
                 client.hmset("tiny:custom:"+query.name, 'url', urlc.host, 'protocol', protocol, 'path', path, 'remove', pass);
-                client.hincrby(redis_custom+query.name, 'views', 1);
-                client.expire(redis_custom+query.name, cttl);
+                client.hincrby(config.redis_custom+query.name, 'views', 1);
+                client.expire(config.redis_custom+query.name, config.cttl);
                 res.writeHead(201, { 'message': query.name+' Created'});
-                res.end('{error: 201, message: '+query.name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+host_url+query.name+'}');
+                res.end('{error: 201, message: '+query.name+' Created, protocol: '+protocol+', url: '+urlc.host+', path: '+path+', pass: '+pass+', link: '+config.host_url+query.name+'}');
             }else{
-                client.ttl(redis_custom+query.name, function(err, ttl){
+                client.ttl(config.redis_custom+query.name, function(err, ttl){
                     res.writeHead(409, {  'message': query.name+' in use'});
                     res.end('{error: 409, message: '+query.name+' in use, name: '+query.name+', link: '+hash.protocol+'//'+hash.url+hash.path+', ttl: '+ttl+'}');
                 });
@@ -447,41 +462,41 @@ app.get('/:id', function(req, res){
   		res.send({error: 'No ID was entered.'});
   	}else{
   		var id = req.params.id;
-	  	client.hgetall(redis_custom+id, function(err, hash) {
+	  	client.hgetall(config.redis_custom+id, function(err, hash) {
 	  		if(hash != null){
                 if(hash.protocol != null){
-                    client.hincrby(redis_custom+id, 'views', 1);
-                    client.expire(redis_custom+id, cttl);
+                    client.hincrby(config.redis_custom+id, 'views', 1);
+                    client.expire(config.redis_custom+id, config.cttl);
                     res.writeHead(302, {  'Location': hash.protocol+'//'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: '+hash.protocol+'//'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }else{
-                    client.hincrby(redis_custom+id, 'views', 1);
-                    client.expire(redis_custom+id, cttl);
+                    client.hincrby(config.redis_custom+id, 'views', 1);
+                    client.expire(config.redis_custom+id, config.cttl);
                     res.writeHead(302, {  'Location': 'http://'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: http://'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }
 	   		}else{
                 client.hgetall('url:tiny:'+id, function(err, hash) {
                     if(hash != null){
                         if(hash.protocol != null){
-                            client.hincrby(redis_random+id, 'views', 1);
-                            client.expire(redis_random+id, ttl);
+                            client.hincrby(config.redis_random+id, 'views', 1);
+                            client.expire(config.redis_random+id, config.ttl);
                             res.writeHead(302, {  'Location': hash.protocol+'//'+hash.url+hash.path});
                             res.end('{error: 302, message: moved location: '+hash.protocol+'//'+hash.url+'}');
-                            process.stdout.write(host_url+id+' used\n');
+                            process.stdout.write(config.host_url+id+' used\n');
                         }else{
-                            client.hincrby(redis_random+id, 'views', 1);
-                            client.expire(redis_random+id, ttl);
+                            client.hincrby(config.redis_random+id, 'views', 1);
+                            client.expire(config.redis_random+id, config.ttl);
                             res.writeHead(302, {  'Location': 'http://'+hash.url+hash.path});
                             res.end('{error: 302, message: moved location: http://'+hash.url+'}');
-                            process.stdout.write(host_url+id+' used\n');
+                            process.stdout.write(config.host_url+id+' used\n');
                         }
                     }else{
                         res.writeHead(404, {error: 'Invalid ID was entered.'});
                         res.end('{error: 404, message: Invalid ID was entered}');
-                        process.stdout.write(host_url+id+' was tried, no value found\n');
+                        process.stdout.write(config.host_url+id+' was tried, no value found\n');
                     }
                 });
 	   		}
@@ -502,13 +517,13 @@ app.get('/:id', function(req, res){
                     client.expire(redis_v1+id, ttl);
                     res.writeHead(302, {  'Location': hash.protocol+'//'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: '+hash.protocol+'//'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }else{
                     client.hincrby(redis_v1+id, 'views', 1);
                     client.expire(redis_v1+id, ttl);
                     res.writeHead(302, {  'Location': 'http://'+hash.url+hash.path});
                     res.end('{error: 302, message: moved location: http://'+hash.url+'}');
-                    process.stdout.write(host_url+id+' used\n');
+                    process.stdout.write(config.host_url+id+' used\n');
                 }
 	   		}else{
                 res.writeHead(404, {error: 'Invalid ID was entered.'});
@@ -519,7 +534,7 @@ app.get('/:id', function(req, res){
 });
 */
 app.get('/', function(req,res){
-    res.writeHead(302, {  'Location': default_link});
+    res.writeHead(302, {  'Location': config.default_link});
 	res.end();
 });
 
@@ -528,5 +543,5 @@ client.on("error", function (err) {
         console.log("Error " + err);
 });
 
-app.listen(app_port);
-console.log("TinyURL server listening on port "+app_port);
+app.listen(config.app_port);
+console.log("TinyURL server listening on port "+config.app_port);
