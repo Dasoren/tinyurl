@@ -1,18 +1,8 @@
 /**
  * Module dependencies.
  */
-var tinyurl_version = "0.0.13"; //DO NOT EDIT
-var fs = require('fs.extra');
-fs.exists('./config.js', function (exists) {
-    if (exists) { 
-        
-    } else { 
-        fs.copy('./config.js.sample', './config.js', function (err) {
-            if (err) { throw err; }
-            console.log("made the config.js file.");
-        });
-    }
-});
+var tinyurl_version = "0.0.14"; //DO NOT EDIT
+
 var config = require('./config');
 var colors = require('./node_modules/colors');
 var https = require('https');
