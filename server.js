@@ -25,7 +25,9 @@ function versionCheck(isstart){
             });
             res.on('end', function () {
                 var tinyurl_version_new = data;
-                if(tinyurl_version_new != tinyurl_version){
+                if(res.statusCode != 200){
+                    console.log(' Error getting version ');
+                }else if(tinyurl_version_new != tinyurl_version){
                     console.log("-- This version (".red+tinyurl_version.yellow+") is OUT of date.\n-- The new version is (".red+tinyurl_version_new.cyan+")\n-- Please update by running git clone git://github.com/dasoren/tinyurl.git from the tinyurl folder.\n-- This will not edit your configuration files.".red);
                 }else if(tinyurl_version_new == tinyurl_version && isstart == "yes"){
                     console.log("This version (".green+tinyurl_version.cyan+") is up to date.".green);
